@@ -1,0 +1,15 @@
+{
+  "name": "omnibox-best-url",
+  "version": "1.0.0",
+  "description": "Chrome extension providing omnibox suggestions and best URL handling",
+  "main": "dist/background.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.238",
+    "typescript": "^5.2.2"
+  }
+}

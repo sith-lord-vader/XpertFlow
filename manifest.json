@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Omnibox Best URL",
+  "version": "1.0",
+  "description": "Type the omnibox keyword then a query; opens the best-guess URL or search.",
+  "omnibox": {
+    "keyword": "flo"
+  },
+  "background": {
+    "service_worker": "dist/background.js"
+  },
+  "permissions": []
+}
