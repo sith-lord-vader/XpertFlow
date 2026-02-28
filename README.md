@@ -18,14 +18,22 @@ Change the omnibox keyword by editing `manifest.json` -> `omnibox.keyword`.
 
 ## Building from TypeScript
 
-This project has been converted to TypeScript. Before loading the extension in Chrome, compile the sources:
+This project has been converted to TypeScript. Chrome service workers **do not** support ES modules, so browserify we previously relied on `tsc` alone and the output would contain `import`/`export` statements that break at runtime. To address this we now use a lightweight bundler (`esbuild`) which inlines all imports and produces a single non‑module script.
+
+Install dependencies and build:
 
 ```bash
-npm install        # install dev dependencies (typescript, @types/chrome)
-npm run build      # transpile TS into `dist/` folder
+npm install        # install dev dependencies (typescript, esbuild, etc.)
+npm run build      # typecheck & bundle into `dist/background.js`
 ```
 
-If you edit the source files, run `npm run watch` to rebuild automatically.
+For continuous development use:
+
+```bash
+npm run watch      # rebuild on source changes (esbuild watch mode)
+```
+
+The final file at `dist/background.js` no longer contains any `import` or `export` keywords and is safe to use as the service worker in `manifest.json`.
 
 Once `dist/background.js` exists, load or reload the unpacked extension as before.
 

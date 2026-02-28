@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Omnibox Best URL",
+  "name": "XpertFlo",
   "version": "1.0",
   "description": "Type the omnibox keyword then a query; opens the best-guess URL or search.",
   "omnibox": {
@@ -9,5 +9,11 @@
   "background": {
     "service_worker": "dist/background.js"
   },
-  "permissions": []
+  "permissions": ["storage", "sidePanel"],
+  "side_panel": {
+    "default_path": "ui/build/index.html"
+  },
+  "action": {
+    "default_title": "Click to open panel"
+  }
 }
