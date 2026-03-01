@@ -1,3 +1,13 @@
+@import "tailwindcss";
+
+:root {
+  --primary-color: #d0da63;
+}
+
+body {
+  background: #0a1312;
+  color: whitesmoke;
+}
 .App {
   text-align: center;
 }
