@@ -9,11 +9,12 @@
   "background": {
     "service_worker": "dist/background.js"
   },
-  "permissions": ["storage", "sidePanel"],
+  "permissions": ["storage", "sidePanel", "scripting", "tabs", "activeTab"],
   "side_panel": {
     "default_path": "ui/build/index.html"
   },
   "action": {
     "default_title": "Click to open panel"
-  }
+  },
+  "host_permissions": ["<all_urls>"]
 }

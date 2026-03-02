@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { jwtDecode } from "jwt-decode";
+import { useContext, useState } from "react";
 import { toast } from "react-toastify";
+import { AuthContext } from "../App";
 import Button from "../components/Button";
 import FormInput from "../components/FormInput";
 import storage from "../lib/storage";
@@ -28,9 +30,11 @@ const initSignInData = {
   password: { data: "", error: "" },
 };
 
-export default function UnauthorizedPage({ setLoggedIn }) {
+export default function UnauthorizedPage() {
   const [signUpData, setSignUpData] = useState(initSignUpData);
   const [signInData, setSignInData] = useState(initSignInData);
+
+  const authObj = useContext(AuthContext);
 
   const handleSignUpChange = (field, value) => {
     setSignUpData((prev) => ({
@@ -112,11 +116,15 @@ export default function UnauthorizedPage({ setLoggedIn }) {
       const token = data.access_token;
 
       storage.set({ authToken: token });
+      authObj.setAuthToken(token);
 
-      console.log("Sign-in successful:", data);
+      const decodedData = jwtDecode(token);
+      authObj.setUserData(decodedData);
+
+      console.log("Sign-in successful");
       toast.success("Sign-in successful!");
       setSignInData(initSignInData);
-      setTimeout(() => setLoggedIn(true), 1000);
+      setTimeout(() => authObj.setLoggedIn(true), 1000);
     } catch (error) {
       console.error("Sign-in error:", error);
       toast.error("Sign-in failed. Please try again.");

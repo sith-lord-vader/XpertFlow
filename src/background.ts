@@ -2,6 +2,12 @@ import { loginHandler } from "./auth";
 
 let loggedIn = false;
 
+const thisIs = "service worker background script";
+
+console.log("🚀 --------------------------------------🚀");
+console.log("🚀 ~ thisIs:", thisIs);
+console.log("🚀 --------------------------------------🚀");
+
 chrome.storage.local.get("authToken").then((result) => {
   console.log(result);
   if (result.authToken) {
@@ -19,6 +25,27 @@ chrome.omnibox.setDefaultSuggestion({
   description: `Open best URL for "%s" (logged in: ${loggedIn ? "Yes" : "No"})`,
 });
 
+async function getCurrentTab() {
+  let queryOptions = { active: true, lastFocusedWindow: true };
+  // `tab` will either be a `tabs.Tab` instance or `undefined`.
+  let [tab] = await chrome.tabs.query(queryOptions);
+  if (!tab || !tab.id) {
+    throw new Error("No active tab found");
+  }
+  const injectionResult = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => {
+      return document.documentElement.outerHTML;
+    },
+  });
+
+  // The result of the 'func' is wrapped in an array/object structure
+  const html = injectionResult[0].result;
+
+  console.log("HTML Length:", html.length, tab.title, tab.url);
+  return { result: html, title: tab.title, url: tab.url };
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "IS_LOGGED_IN") {
     // Perform logic (API calls, storage access, etc.)
@@ -29,6 +56,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // Send the data back to the sidebar
     sendResponse(data);
+  }
+
+  if (message.action === "GET_CURRENT_TAB") {
+    getCurrentTab().then((tab) => {
+      const data = {
+        status: "success",
+        result: tab,
+      };
+      sendResponse(data);
+    });
   }
 
   // Return true if you're planning to send a response asynchronously

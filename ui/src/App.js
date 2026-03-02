@@ -1,36 +1,92 @@
 /*global chrome*/
-import { useEffect, useState } from "react";
+import { jwtDecode } from "jwt-decode";
+import { createContext, useEffect, useState } from "react";
 import { ToastContainer } from "react-toastify";
 import "./App.scss";
+import storage from "./lib/storage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
+
+export const AuthContext = createContext({
+  loggedIn: false,
+  setLoggedIn: () => {},
+  userData: null,
+  setUserData: () => {},
+  authToken: null,
+  setAuthToken: () => {},
+});
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [authToken, setAuthToken] = useState(null);
+
+  const getCurrentTab = async () => {
+    chrome.runtime.sendMessage(
+      {
+        action: "GET_CURRENT_TAB",
+      },
+      (response) => {
+        // Handle the response from the service worker
+        console.log("Current tab URL:", response.result);
+      },
+    );
+  };
+
   useEffect(() => {
-    // Listen for messages from the background script
-    try {
-      chrome.runtime.sendMessage(
-        {
-          action: "IS_LOGGED_IN",
-        },
-        (response) => {
-          // Handle the response from the service worker
-          setLoggedIn(response.result);
-        },
-      );
-    } catch (error) {
-      console.error("Error sending message to service worker:", error);
+    async function checkAuth() {
+      // Listen for messages from the background script
+      try {
+        const loggedInStatus = await storage.get("authToken");
+        console.log("Auth token from storage:", loggedInStatus);
+        if (!loggedInStatus) {
+          setLoggedIn(false);
+        }
+        setAuthToken(loggedInStatus);
+        const data = jwtDecode(loggedInStatus.authToken);
+        setUserData(data);
+        setLoggedIn(true);
+      } catch (error) {
+        console.error("Error sending message to service worker:", error);
+      }
     }
+    checkAuth();
+    const thisIs = "side panel React application";
+
+    console.log("🚀 --------------------------------------🚀");
+    console.log("🚀 ~ thisIs:", thisIs);
+    console.log("🚀 --------------------------------------🚀");
   }, []);
   return (
-    <div className="App">
-      <ToastContainer />
-      {loggedIn ? (
-        <div>LoggedIn</div>
-      ) : (
-        <UnauthorizedPage setLoggedIn={setLoggedIn} />
-      )}
-    </div>
+    <AuthContext.Provider
+      value={{
+        loggedIn,
+        setLoggedIn,
+        userData,
+        setUserData,
+        authToken,
+        setAuthToken,
+      }}
+    >
+      <div className="App">
+        <ToastContainer />
+        {loggedIn ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: "100vh",
+            }}
+          >
+            LoggedIn {userData?.name}, {userData?.sub}
+            <button onClick={getCurrentTab}>Test</button>
+          </div>
+        ) : (
+          <UnauthorizedPage setLoggedIn={setLoggedIn} />
+        )}
+      </div>
+    </AuthContext.Provider>
   );
 }
 
