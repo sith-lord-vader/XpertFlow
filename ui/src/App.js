@@ -1,7 +1,7 @@
 /*global chrome*/
 import { jwtDecode } from "jwt-decode";
 import { createContext, useEffect, useState } from "react";
-import { ToastContainer } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import "./App.scss";
 import storage from "./lib/storage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
@@ -23,11 +23,13 @@ function App() {
   const getCurrentTab = async () => {
     chrome.runtime.sendMessage(
       {
-        action: "GET_CURRENT_TAB",
+        action: "ADD_CURRENT_TAB",
       },
       (response) => {
         // Handle the response from the service worker
-        console.log("Current tab URL:", response.result);
+        if (response && response.status === "success") {
+          toast.success("Current tab data added successfully!");
+        }
       },
     );
   };
@@ -80,7 +82,7 @@ function App() {
             }}
           >
             LoggedIn {userData?.name}, {userData?.sub}
-            <button onClick={getCurrentTab}>Test</button>
+            <button onClick={getCurrentTab}>Add</button>
           </div>
         ) : (
           <UnauthorizedPage setLoggedIn={setLoggedIn} />

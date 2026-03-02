@@ -1,3 +1,4 @@
+/*global chrome*/
 import { jwtDecode } from "jwt-decode";
 import { useContext, useState } from "react";
 import { toast } from "react-toastify";
@@ -124,6 +125,9 @@ export default function UnauthorizedPage() {
       console.log("Sign-in successful");
       toast.success("Sign-in successful!");
       setSignInData(initSignInData);
+      chrome.runtime.sendMessage({
+        action: "LOG_IN",
+      });
       setTimeout(() => authObj.setLoggedIn(true), 1000);
     } catch (error) {
       console.error("Sign-in error:", error);

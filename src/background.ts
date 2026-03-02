@@ -1,6 +1,7 @@
-import { loginHandler } from "./auth";
+const API_BASE_URL = "http://localhost:8000";
 
 let loggedIn = false;
+let authToken: string | null = null;
 
 const thisIs = "service worker background script";
 
@@ -8,22 +9,25 @@ console.log("🚀 --------------------------------------🚀");
 console.log("🚀 ~ thisIs:", thisIs);
 console.log("🚀 --------------------------------------🚀");
 
-chrome.storage.local.get("authToken").then((result) => {
-  console.log(result);
-  if (result.authToken) {
-    loggedIn = true;
-  } else {
-    loggedIn = false;
-  }
-});
+const syncAuth = () => {
+  chrome.storage.local.get("authToken").then((result) => {
+    console.log(result);
+    if (result.authToken) {
+      loggedIn = true;
+      authToken = result.authToken;
+    } else {
+      loggedIn = false;
+    }
+  });
+};
 
 chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
   .catch((error) => console.error(error));
-// Background service worker for Omnibox Best URL
-chrome.omnibox.setDefaultSuggestion({
-  description: `Open best URL for "%s" (logged in: ${loggedIn ? "Yes" : "No"})`,
-});
+// // Background service worker for Omnibox Best URL
+// chrome.omnibox.setDefaultSuggestion({
+//   description: `Open best URL for "%s" (logged in: ${loggedIn ? "Yes" : "No"})`,
+// });
 
 async function getCurrentTab() {
   let queryOptions = { active: true, lastFocusedWindow: true };
@@ -42,11 +46,32 @@ async function getCurrentTab() {
   // The result of the 'func' is wrapped in an array/object structure
   const html = injectionResult[0].result;
 
-  console.log("HTML Length:", html.length, tab.title, tab.url);
-  return { result: html, title: tab.title, url: tab.url };
+  const res = await fetch(API_BASE_URL + "/core/store-link-aied", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`,
+    },
+    body: JSON.stringify({
+      html_content: html,
+      title: tab.title,
+      url: tab.url,
+    }),
+  });
+  if (!res.ok) {
+    console.error("Failed to store link in backend:", res.statusText);
+    throw new Error("Failed to store link in backend");
+  }
+
+  console.log("Successfully stored link in backend");
+  return true;
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "LOG_IN") {
+    syncAuth();
+    sendResponse(true);
+  }
   if (message.action === "IS_LOGGED_IN") {
     // Perform logic (API calls, storage access, etc.)
     const data = {
@@ -58,14 +83,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse(data);
   }
 
-  if (message.action === "GET_CURRENT_TAB") {
-    getCurrentTab().then((tab) => {
-      const data = {
-        status: "success",
-        result: tab,
-      };
-      sendResponse(data);
-    });
+  if (message.action === "ADD_CURRENT_TAB") {
+    getCurrentTab()
+      .then((tab) => {
+        const data = {
+          status: "success",
+          ok: true,
+        };
+        sendResponse(data);
+      })
+      .catch((error) => {
+        const data = {
+          status: "error",
+          ok: false,
+        };
+        sendResponse(data);
+      });
   }
 
   // Return true if you're planning to send a response asynchronously
@@ -94,63 +127,40 @@ function getBestUrl(input: string): string {
   return "https://www.google.com/search?q=" + q + "&btnI=1";
 }
 
+let debounceTimer: any;
 chrome.omnibox.onInputChanged.addListener(
   (
     text: string,
     suggest: (suggestions: chrome.omnibox.SuggestResult[]) => void,
   ) => {
-    // Provide a set of suggestions based on the current input text.
-    fetch("https://www.google.com")
-      .then(() => {
-        console.log("Background fetch successful");
-        suggestions.push({
-          content: "login failed",
-          description: "Background fetch successful.",
-        });
-      })
-      .catch((error) => {
-        // console.error("Background fetch failed:", error);
-        suggest([
-          {
-            content: "login failed",
-            description: "Background fetch failed.",
-          },
-        ]);
-      });
-    const suggestions: chrome.omnibox.SuggestResult[] = [];
-    const trimmed: string = text.trim();
-    const texts: string[] = trimmed.split(/\s+/);
-    const action: string = texts[0].toLowerCase();
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(async () => {
+      if (!text) return;
 
-    if ("login".includes(action)) {
-      if (texts.length < 2) {
-        suggestions.push({
-          content: "login &lt;email&gt; &lt;password&gt;",
-          description:
-            "Please type 'login &lt;email&gt; &lt;password&gt;' to login",
-        });
+      try {
+        // 3. Fetch your data
+        const response = await fetch(
+          `${API_BASE_URL}/core/search-aied?query=${encodeURIComponent(text)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          },
+        );
+        const data = await response.json();
+
+        console.log("Search results:", data);
+        // 4. Format for Omnibox suggestions
+        const suggestions = data.map((item: any) => ({
+          content: item.url,
+          description: `<match>${item.title}</match> <dim>${item.url}</dim>`,
+        }));
+
+        suggest(suggestions);
+      } catch (error) {
+        console.error("Search error:", error);
       }
-      if (texts.length === 3) {
-        const email = texts[1];
-        const password = texts[2];
-        loginHandler(email, password)
-          .then((response) => {
-            console.log("Login response:", response);
-            suggestions.push({
-              content: "login success",
-              description: "Login successful!",
-            });
-          })
-          .catch((error) => {
-            // console.error("Login error:", error);
-            suggestions.push({
-              content: "login failed",
-              description: "Login failed.",
-            });
-          });
-      }
-    }
-    suggest(suggestions);
+    }, 300);
   },
 );
 
