@@ -4,6 +4,7 @@ import { createContext, useEffect, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "./App.scss";
 import storage from "./lib/storage";
+import AuthorizedPage from "./pages/AuthorizedPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 
 export const AuthContext = createContext({
@@ -72,18 +73,7 @@ function App() {
       <div className="App">
         <ToastContainer />
         {loggedIn ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              alignItems: "center",
-              minHeight: "100vh",
-            }}
-          >
-            LoggedIn {userData?.name}, {userData?.sub}
-            <button onClick={getCurrentTab}>Add</button>
-          </div>
+          <AuthorizedPage />
         ) : (
           <UnauthorizedPage setLoggedIn={setLoggedIn} />
         )}

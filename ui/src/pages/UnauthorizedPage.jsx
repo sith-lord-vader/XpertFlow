@@ -125,10 +125,12 @@ export default function UnauthorizedPage() {
       console.log("Sign-in successful");
       toast.success("Sign-in successful!");
       setSignInData(initSignInData);
+      setTimeout(() => {
+        authObj.setLoggedIn(true);
+      }, 1000);
       chrome.runtime.sendMessage({
         action: "LOG_IN",
       });
-      setTimeout(() => authObj.setLoggedIn(true), 1000);
     } catch (error) {
       console.error("Sign-in error:", error);
       toast.error("Sign-in failed. Please try again.");
